@@ -1,11 +1,14 @@
 const keys = require('./keys');
 const redis = require('redis');
 
-const redisClient = redis.createClient({
+const redisOptions = {
   host: keys.redisHost,
   port: keys.redisPort,
+  auth_pass: keys.redisPassword,
+  tls: keys.redisTls ? {} : undefined,
   retry_strategy: () => 1000
-});
+};
+const redisClient = redis.createClient(redisOptions);
 const sub = redisClient.duplicate();
 
 function fib(index) {

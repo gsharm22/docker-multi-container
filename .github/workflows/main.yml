@@ -1,4 +1,4 @@
-name: Build and Push Docker Images
+name: Test and publish images to Azure Container Registry
 
 on:
   push:
@@ -6,8 +6,11 @@ on:
   pull_request:
     branches: [master, main]
 
+env:
+  ACR_SERVER: ${{ vars.ACR_SERVER }}
+
 jobs:
-  build-and-test:
+  test:
     runs-on: ubuntu-latest
 
     steps:
@@ -15,50 +18,68 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build client test image
-        run: docker build -t gsharm22/react-test -f ./client/Dockerfile.dev ./client
+        run: docker build -t react-test -f ./client/Dockerfile.dev ./client
 
       - name: Run client tests
-        run: docker run gsharm22/react-test npm test -- --coverage
+        run: docker run --rm react-test npm test -- --coverage --watchAll=false
 
-      - name: Log in to Docker Hub
-        if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_ID }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+  publish:
+    name: Publish images to ACR
+    needs: test
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Sign in to ACR
+        run: |
+          echo "${{ secrets.ACR_PASSWORD }}" | \
+            docker login "$ACR_SERVER" \
+              --username "${{ secrets.ACR_USERNAME }}" \
+              --password-stdin
 
       - name: Build and push client image
-        if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
-        uses: docker/build-push-action@v6
-        with:
-          context: ./client
-          file: ./client/Dockerfile
-          push: true
-          tags: gsharm22/multi-client:latest
+        run: |
+          docker build \
+            -f ./client/Dockerfile \
+            -t "$ACR_SERVER/multi-client:${GITHUB_SHA}" \
+            -t "$ACR_SERVER/multi-client:latest" \
+            ./client
+          docker push "$ACR_SERVER/multi-client:${GITHUB_SHA}"
+          docker push "$ACR_SERVER/multi-client:latest"
 
-      - name: Build and push nginx image
-        if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
-        uses: docker/build-push-action@v6
-        with:
-          context: ./nginx
-          file: ./nginx/Dockerfile
-          push: true
-          tags: gsharm22/multi-nginx:latest
+      - name: Build and push Azure Nginx image
+        run: |
+          docker build \
+            -f ./azure/Dockerfile.nginx \
+            -t "$ACR_SERVER/multi-nginx:${GITHUB_SHA}" \
+            -t "$ACR_SERVER/multi-nginx:latest" \
+            ./azure
+          docker push "$ACR_SERVER/multi-nginx:${GITHUB_SHA}"
+          docker push "$ACR_SERVER/multi-nginx:latest"
 
       - name: Build and push server image
-        if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
-        uses: docker/build-push-action@v6
-        with:
-          context: ./server
-          file: ./server/Dockerfile
-          push: true
-          tags: gsharm22/multi-server:latest
+        run: |
+          docker build \
+            -f ./server/Dockerfile \
+            -t "$ACR_SERVER/multi-server:${GITHUB_SHA}" \
+            -t "$ACR_SERVER/multi-server:latest" \
+            ./server
+          docker push "$ACR_SERVER/multi-server:${GITHUB_SHA}"
+          docker push "$ACR_SERVER/multi-server:latest"
 
       - name: Build and push worker image
-        if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
-        uses: docker/build-push-action@v6
-        with:
-          context: ./worker
-          file: ./worker/Dockerfile
-          push: true
-          tags: gsharm22/multi-worker:latest
+        run: |
+          docker build \
+            -f ./worker/Dockerfile \
+            -t "$ACR_SERVER/multi-worker:${GITHUB_SHA}" \
+            -t "$ACR_SERVER/multi-worker:latest" \
+            ./worker
+          docker push "$ACR_SERVER/multi-worker:${GITHUB_SHA}"
+          docker push "$ACR_SERVER/multi-worker:latest"
+
+      - name: Sign out from ACR
+        if: always()
+        run: docker logout "$ACR_SERVER"

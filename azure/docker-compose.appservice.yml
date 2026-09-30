@@ -1,0 +1,22 @@
+version: '3.8'
+
+# Azure App Service multi-container configuration.
+# Replace YOUR_ACR_SERVER with the registry server, for example:
+# myregistry.azurecr.io
+#
+# Configure database and Redis values as App Service application settings.
+# Do not commit those values or passwords to this file.
+services:
+  nginx:
+    image: YOUR_ACR_SERVER/multi-nginx:latest
+    ports:
+      - '80:80'
+
+  client:
+    image: YOUR_ACR_SERVER/multi-client:latest
+
+  server:
+    image: YOUR_ACR_SERVER/multi-server:latest
+
+  worker:
+    image: YOUR_ACR_SERVER/multi-worker:latest

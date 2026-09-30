@@ -3,7 +3,7 @@ services:
   postgres:
     image: "postgres:latest"
     environment:
-      POSTGRES_PASSWORD: postgres_password
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_password}
   redis:
     image: "redis:latest"
   nginx:
@@ -21,13 +21,15 @@ services:
       - /app/node_modules
       - ./server:/app
     environment:
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - PGUSER=postgres
-      - PGHOST=postgres
-      - PGDATABASE=postgres
-      - PGPASSWORD=postgres_password
-      - PGPORT=5432
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - REDIS_TLS=${REDIS_TLS:-false}
+      - PGUSER=${PGUSER:-postgres}
+      - PGHOST=${PGHOST:-postgres}
+      - PGDATABASE=${PGDATABASE:-postgres}
+      - PGPASSWORD=${PGPASSWORD:-postgres_password}
+      - PGPORT=${PGPORT:-5432}
   client:
     build:
       dockerfile: Dockerfile.dev
@@ -36,12 +38,14 @@ services:
       - /app/node_modules
       - ./client:/app
   worker:
-    environment:
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
     build:
       dockerfile: Dockerfile.dev
       context: ./worker
     volumes:
       - /app/node_modules
       - ./worker:/app
+    environment:
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - REDIS_TLS=${REDIS_TLS:-false}

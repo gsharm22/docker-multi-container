@@ -3,22 +3,35 @@ services:
   - docker
 
 before_install:
-  - docker build -t marley/react-test -f ./client/Dockerfile.dev ./client
+  - docker build -t gsharm22/react-test -f ./client/Dockerfile.dev ./client
 
 script:
-  - docker run marley/react-test npm test -- --coverage
+  - docker run gsharm22/react-test npm test -- --coverage
 
 after_success:
-  - docker build -t marley/multi-client ./client
-  - docker build -t marley/multi-nginx ./nginx
-  - docker build -t marley/multi-server ./server
-  - docker build -t marley/multi-worker ./worker
+  - docker build -t gsharm22/multi-client ./client
+  - docker build -t gsharm22/multi-nginx ./nginx
+  - docker build -t gsharm22/multi-server ./server
+  - docker build -t gsharm22/multi-worker ./worker
 
   # Log in to the docker CLI
   - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_ID" --password-stdin
 
   # Take those images and push them to docker hub
-  - docker push marley/multi-client
-  - docker push marley/multi-nginx
-  - docker push marley/multi-server
-  - docker push marley/multi-worker
+  - docker push gsharm22/multi-client
+  - docker push gsharm22/multi-nginx
+  - docker push gsharm22/multi-server
+  - docker push gsharm22/multi-worker
+
+deploy:
+  provider: elasticbeanstalk
+  region: "us-west-1"
+  app: "multi-docker"
+  env: "MultiDocker-env"
+  bucket_name: "elasticbeanstalk-us-west-1-3064766"
+  bucket_path: "docker-multi"
+  on:
+    branch: master
+  access_key_id: $AWS_ACCESS_KEY
+  secret_access_key:
+    secure: "$AWS_SECRET_KEY"
