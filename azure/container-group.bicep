@@ -164,7 +164,7 @@ resource app 'Microsoft.Web/sites@2024-04-01' = {
     httpsOnly: true
     siteConfig: {
       alwaysOn: true
-      linuxFxVersion: 'DOCKER|${acrServer}/multi-nginx:${imageTag}'
+      linuxFxVersion: 'sitecontainers'
       appSettings: appSettings
     }
   }
